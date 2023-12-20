@@ -10,18 +10,25 @@ from torch import optim
 from torch.utils.data import DataLoader, TensorDataset, Dataset
 
 from DeepFM.deepFM import DeepFM
+from DeepFM.wide_deep import WideDeep
+
+
+hidden_units = [64, 32, 16]
+dropout = 0.2
+epochs = 10
+log_step_freq = 10
 
 
 def load_preprocessed_data(file_path='./preprocessed_data/'):
-    train = pd.read_csv(file_path+'train_set.csv')
-    test = pd.read_csv(file_path+'test_set.csv')
-    val = pd.read_csv(file_path+'val_set.csv')
+    train = pd.read_csv(file_path + 'train_set.csv')
+    test = pd.read_csv(file_path + 'test_set.csv')
+    val = pd.read_csv(file_path + 'val_set.csv')
 
     trn_x, trn_y = train.drop(columns=['Label']).values, train['Label'].values
     val_x, val_y = val.drop(columns=['Label']).values, val['Label'].values
     test_x = test.values
 
-    fea_cols = np.load(file_path+'fea_col.npy', allow_pickle=True)
+    fea_cols = np.load(file_path + 'fea_col.npy', allow_pickle=True)
     print(fea_cols)
 
     return fea_cols, (trn_x, trn_y), (val_x, val_y), test_x
@@ -33,33 +40,17 @@ def auc(y_pred, y_true):
     return roc_auc_score(y, pred)
 
 
-if __name__ == '__main__':
-    fea_cols, (trn_x, trn_y), (val_x, val_y), test_x = load_preprocessed_data()
-
-    train_dataset = TensorDataset(torch.tensor(trn_x).float(), torch.tensor(trn_y).float())
-    val_dataset = TensorDataset(torch.tensor(val_x).float(), torch.tensor(val_y).float())
-
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
-
-
-    hidden_units = [128, 64, 32]
-    dropout = 0.2
-    model = DeepFM(fea_cols, hidden_units, dropout=dropout)
+def train(model):
     loss_func = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     metric_func = auc
     metric_name = 'auc'
 
-    epochs = 10
-    log_step_freq = 10
-    # dfhistory = pd.DataFrame(columns=['epoch', 'loss', metric_name, 'val_loss', 'val_' + metric_name])
-
     print('start_training.........')
     nowtime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print('========' * 8 + '%s' % nowtime)
 
-    for epoch in range(1, epochs+1):
+    for epoch in range(1, epochs + 1):
         # train
         model.train()
         loss_sum = 0.0
@@ -112,11 +103,29 @@ if __name__ == '__main__':
         # dfhistory.loc[epoch - 1] = info
 
         # 打印日志
-        print(("\nEPOCH=%d, loss=%.3f, " + metric_name + " = %.3f, val_loss=%.3f, " + "val_" + metric_name + " = %.3f") % info)
+        print((
+                      "\nEPOCH=%d, loss=%.3f, " + metric_name + " = %.3f, val_loss=%.3f, " + "val_" + metric_name + " = %.3f") % info)
         nowtime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print('\n' + '==========' * 8 + '%s' % nowtime)
 
     print('Finished Training')
 
+
+if __name__ == '__main__':
+    fea_cols, (trn_x, trn_y), (val_x, val_y), test_x = load_preprocessed_data()
+
+    train_dataset = TensorDataset(torch.tensor(trn_x).float(), torch.tensor(trn_y).float())
+    val_dataset = TensorDataset(torch.tensor(val_x).float(), torch.tensor(val_y).float())
+
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
+
+    # model = DeepFM(fea_cols, hidden_units, dropout=dropout)
+    model = WideDeep(fea_cols, hidden_units, dropout=dropout)
+    train(model)
+    # dfhistory = pd.DataFrame(columns=['epoch', 'loss', metric_name, 'val_loss', 'val_' + metric_name])
+
     # 模型的保存与使用
-    torch.save(model, './model/DeepFM.pkl')
+    # torch.save(model, './model/DeepFM.pkl')
+    torch.save(model, './model/WideDeep.pkl')
+
