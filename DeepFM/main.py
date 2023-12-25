@@ -10,6 +10,7 @@ from torch import optim
 from torch.utils.data import DataLoader, TensorDataset, Dataset
 
 from DeepFM.deepFM import DeepFM
+from DeepFM.deep_crossing import DeepCrossing
 from DeepFM.wide_deep import WideDeep
 
 
@@ -121,11 +122,12 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
 
     # model = DeepFM(fea_cols, hidden_units, dropout=dropout)
-    model = WideDeep(fea_cols, hidden_units, dropout=dropout)
+    # model = WideDeep(fea_cols, hidden_units, dropout=dropout)
+    model = DeepCrossing(fea_cols, hidden_units, dropout=dropout)
     train(model)
     # dfhistory = pd.DataFrame(columns=['epoch', 'loss', metric_name, 'val_loss', 'val_' + metric_name])
 
     # 模型的保存与使用
     # torch.save(model, './model/DeepFM.pkl')
-    torch.save(model, './model/WideDeep.pkl')
-
+    # torch.save(model, './model/WideDeep.pkl')
+    torch.save(model, './model/DeepCrossing.pkl')
