@@ -6,25 +6,8 @@ from torch.utils.data import random_split, DataLoader
 
 from utils import CretioDataset, EarlyStopper
 
-
-class FM(nn.Module):
-    def __init__(self, feats_num, hidden_dim):
-        super(FM, self).__init__()
-        self.feats_num = feats_num
-        self.hidden_dim = hidden_dim
-
-        self.linear = nn.Linear(self.feats_num, 1)
-        self.v = nn.Parameter(torch.rand(self.feats_num, self.hidden_dim))
-        nn.init.xavier_uniform_(self.v)
-
-    def forward(self, x):
-        first_order = self.linear(x)
-
-        square_of_sum = torch.mm(x, self.v) ** 2
-        sum_of_square = torch.mm(x ** 2, self.v ** 2)
-        second_order = 0.5 * torch.sum(square_of_sum - sum_of_square, dim=1, keepdim=True)
-
-        return torch.sigmoid(first_order + second_order)
+from models.fm import FM
+from models.ffm import FFM
 
 
 def train(model, optimizer, criterion, train_loader, device):
@@ -74,7 +57,10 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_set, batch_size=64, shuffle=True)
     test_loader = DataLoader(test_set, batch_size=64, shuffle=True)
 
-    model = FM(dataset.feats_num, hidden_dim=16).cuda()
+    # 模型选择
+    # model = FM(dataset.feats_num, hidden_dim=16).cuda()
+    model = FFM(dataset.feats_num, hidden_dim=16, fields_num=dataset.fields_num, feature2field=dataset.feat2field).cuda()
+
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     early_stopper = EarlyStopper(patience=10, save_path=save_path)
